@@ -250,7 +250,7 @@ function Ventas({ ventas, setVentas, privacy, theme }) {
         ))}
       </div>
       {showModal&&<Modal title="Añadir ingreso" onClose={()=>setShowModal(false)}><EntryForm onSave={add} gradStyle={grad} /></Modal>}
-      {editEntry&&<Modal title="Editar ingreso" onClose={()=>setEditEntry(null)}><EntryForm initial={{amount:String(editEntry.amount),description:editEntry.description,day:editEntry.day||now.getDate(),month:editEntry.month,year:editEntry.year}} onSave={edit} gradStyle={grad} /></Modal>}
+      {editEntry&&<Modal title="Editar ingreso" onClose={()=>setEditEntry(null)}><EntryForm initial={{amount:String(editEntry.amount),description:editEntry.description,day:editEntry.day>0?editEntry.day:now.getDate(),month:editEntry.month,year:editEntry.year}} onSave={edit} gradStyle={grad} /></Modal>}
       {confirmId&&<Confirm msg="¿Eliminar este ingreso?" onOk={()=>del(confirmId)} onCancel={()=>setConfirmId(null)} />}
     </div>
   );
@@ -299,7 +299,7 @@ function GastosTab({ gastos, setGastos, privacy, theme }) {
         ))}
       </div>
       {showModal&&<Modal title="Añadir gasto" onClose={()=>setShowModal(false)}><EntryForm onSave={add} gradStyle={grad} /></Modal>}
-      {editEntry&&<Modal title="Editar gasto" onClose={()=>setEditEntry(null)}><EntryForm initial={{amount:String(editEntry.amount),description:editEntry.description,day:editEntry.day||now.getDate(),month:editEntry.month,year:editEntry.year}} onSave={edit} gradStyle={grad} /></Modal>}
+      {editEntry&&<Modal title="Editar gasto" onClose={()=>setEditEntry(null)}><EntryForm initial={{amount:String(editEntry.amount),description:editEntry.description,day:editEntry.day>0?editEntry.day:now.getDate(),month:editEntry.month,year:editEntry.year}} onSave={edit} gradStyle={grad} /></Modal>}
       {confirmId&&<Confirm msg="¿Eliminar este gasto?" onOk={()=>del(confirmId)} onCancel={()=>setConfirmId(null)} />}
     </div>
   );
