@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Gastos Mensuales</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #1a2744; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+    select, input { appearance: none; -webkit-appearance: none; }
+    select option { background: #1e2e4d; color: #e8edf7; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #2e4070; border-radius: 4px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const THEMES = {
+  emerald: { name: "Esmeralda", primary: "#34d399", secondary: "#059669", light: "rgba(52,211,153,0.1)", border: "rgba(52,211,153,0.25)" },
+  violet:  { name: "Violeta",   primary: "#a78bfa", secondary: "#7c3aed", light: "rgba(167,139,250,0.1)", border: "rgba(167,139,250,0.25)" },
+  blue:    { name: "Azul",      primary: "#60a5fa", secondary: "#2563eb", light: "rgba(96,165,250,0.1)",  border: "rgba(96,165,250,0.25)" },
+};
+const BG_MAIN  = "#1a2744";
+const BG_CARD  = "#243358";
+const BG_INPUT = "#1e2e4d";
+const BG_NAV   = "#1e2e4d";
+const BORDER   = "#2e4070";
+const TEXT_PRI = "#e8edf7";
+const TEXT_SEC = "#8fa3cc";
+const TEXT_MUT = "#5a729e";
+
+function genId() { return Date.now().toString(36) + Math.random().toString(36).substr(2); }
+function fmt(amount, privacy) {
+  if (privacy) return "••••";
+  return amount.toFixed(2).replace(".", ",") + " €";
+}
+
+// ── Icons ──
+const IconHome = () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
+const IconTrend = () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>;
+const IconBag = () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>;
+const IconBar = () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>;
+const IconEye = ({ open }) => open
+  ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+  : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>;
+const IconPlus = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+const IconTrash = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>;
+const IconEdit = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
+const IconX = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+const IconPalette = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>;
+
+const inpStyle = { width:"100%", padding:"12px 14px", background:BG_INPUT, border:`1px solid ${BORDER}`, borderRadius:"10px", color:TEXT_PRI, fontSize:"15px", outline:"none" };
+const lblStyle = { fontSize:"12px", color:TEXT_MUT, fontWeight:"600", marginBottom:"6px", display:"block", textTransform:"uppercase", letterSpacing:"0.05em" };
+
+function Modal({ title, onClose, children }) {
+  return (
+    <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:100, display:"flex", alignItems:"flex-end", justifyContent:"center" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background:BG_CARD, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:"480px", padding:"24px 20px 40px", boxShadow:"0 -8px 40px rgba(0,0,0,0.3)" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"20px" }}>
+          <span style={{ fontSize:"17px", fontWeight:"700", color:TEXT_PRI }}>{title}</span>
+          <button onClick={onClose} style={{ background:BG_INPUT, border:"none", borderRadius:"50%", width:"32px", height:"32px", cursor:"pointer", color:TEXT_SEC, display:"flex", alignItems:"center", justifyContent:"center" }}><IconX /></button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Confirm({ msg, onOk, onCancel }) {
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:200, display:"flex", alignItems:"center", justifyContent:"center", padding:"20px" }}>
+      <div style={{ background:BG_CARD, borderRadius:"16px", padding:"24px", maxWidth:"320px", width:"100%" }}>
+        <p style={{ color:TEXT_PRI, fontSize:"15px", marginBottom:"20px", textAlign:"center" }}>{msg}</p>
+        <div style={{ display:"flex", gap:"10px" }}>
+          <button onClick={onCancel} style={{ flex:1, padding:"10px", background:BG_INPUT, border:"none", borderRadius:"10px", color:TEXT_SEC, fontSize:"14px", cursor:"pointer", fontWeight:"600" }}>Cancelar</button>
+          <button onClick={onOk} style={{ flex:1, padding:"10px", background:"#ef4444", border:"none", borderRadius:"10px", color:"#fff", fontSize:"14px", cursor:"pointer", fontWeight:"600" }}>Eliminar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EntryForm({ initial, onSave, gradStyle }) {
+  const now = new Date();
+  const [f, setF] = useState(initial || { amount:"", description:"", month:now.getMonth(), year:now.getFullYear() });
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:"14px" }}>
+      <div><label style={lblStyle}>Importe (€)</label><input type="number" step="0.01" placeholder="0,00" value={f.amount} onChange={e => setF(p=>({...p,amount:e.target.value}))} style={inpStyle} /></div>
+      <div><label style={lblStyle}>Descripción</label><input type="text" placeholder="Describe el concepto..." value={f.description} onChange={e => setF(p=>({...p,description:e.target.value}))} style={inpStyle} /></div>
+      <div style={{ display:"flex", gap:"8px" }}>
+        <div style={{ flex:2 }}><label style={lblStyle}>Mes</label>
+          <select value={f.month} onChange={e => setF(p=>({...p,month:Number(e.target.value)}))} style={inpStyle}>
+            {MONTHS.map((m,i) => <option key={i} value={i}>{m}</option>)}
+          </select>
+        </div>
+        <div style={{ flex:1 }}><label style={lblStyle}>Año</label><input type="number" value={f.year} onChange={e => setF(p=>({...p,year:Number(e.target.value)}))} style={inpStyle} /></div>
+      </div>
+      <button onClick={() => onSave(f)} style={{ background:gradStyle, border:"none", borderRadius:"12px", padding:"14px", color:"#fff", fontSize:"15px", fontWeight:"700", cursor:"pointer" }}>Guardar</button>
+    </div>
+  );
+}
+
+function MiniBarChart({ data, theme }) {
+  const t = THEMES[theme];
+  const maxVal = Math.max(...data.map(d => Math.max(d.ing, d.gst)), 1);
+  return (
+    <div style={{ display:"flex", alignItems:"flex-end", gap:"4px", height:"100px", padding:"0 4px" }}>
+      {data.map((d,i) => (
+        <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:"2px" }}>
+          <div style={{ width:"100%", display:"flex", gap:"1px", alignItems:"flex-end", height:"80px" }}>
+            <div style={{ flex:1, height:`${(d.ing/maxVal)*100}%`, background:t.primary, borderRadius:"3px 3px 0 0", minHeight:d.ing>0?"3px":"0" }} />
+            <div style={{ flex:1, height:`${(d.gst/maxVal)*100}%`, background:"#f87171", borderRadius:"3px 3px 0 0", minHeight:d.gst>0?"3px":"0" }} />
+          </div>
+          <span style={{ fontSize:"9px", color:TEXT_SEC, fontWeight:"600" }}>{MONTHS[i].slice(0,3)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── DASHBOARD ──
+function Dashboard({ ventas, gastos, privacy, setPrivacy, theme, setTheme }) {
+  const now = new Date();
+  const [month, setMonth] = useState(now.getMonth());
+  const [year, setYear] = useState(now.getFullYear());
+  const [showTheme, setShowTheme] = useState(false);
+  const t = THEMES[theme];
+  const mv = ventas.filter(v => v.month===month && v.year===year);
+  const mg = gastos.filter(g => g.month===month && g.year===year);
+  const totalI = mv.reduce((s,v)=>s+v.amount,0);
+  const totalG = mg.reduce((s,g)=>s+g.amount,0);
+  const benef = totalI - totalG;
+  const roi = totalG > 0 ? (benef/totalG)*100 : 0;
+  const years = [...new Set([...ventas.map(v=>v.year),...gastos.map(g=>g.year),now.getFullYear()])].sort((a,b)=>b-a);
+  return (
+    <div style={{ paddingBottom:"100px" }}>
+      <div style={{ padding:"20px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div>
+          <p style={{ color:TEXT_MUT, fontSize:"12px", fontWeight:"600", textTransform:"uppercase", letterSpacing:"0.08em", margin:0 }}>Resumen</p>
+          <h1 style={{ color:TEXT_PRI, fontSize:"22px", fontWeight:"800", margin:"2px 0 0" }}>Gastos Mensuales</h1>
+        </div>
+        <div style={{ display:"flex", gap:"8px" }}>
+          <button onClick={()=>setShowTheme(s=>!s)} style={{ background:BG_CARD, border:`1px solid ${BORDER}`, borderRadius:"10px", padding:"8px 10px", cursor:"pointer", color:TEXT_SEC, display:"flex", alignItems:"center" }}><IconPalette /></button>
+          <button onClick={()=>setPrivacy(p=>!p)} style={{ background:BG_CARD, border:`1px solid ${BORDER}`, borderRadius:"10px", padding:"8px 12px", cursor:"pointer", color:TEXT_SEC, display:"flex", alignItems:"center" }}><IconEye open={!privacy} /></button>
+        </div>
+      </div>
+      {showTheme && (
+        <div style={{ margin:"12px 20px 0", background:BG_CARD, border:`1px solid ${BORDER}`, borderRadius:"14px", padding:"14px" }}>
+          <p style={{ color:TEXT_MUT, fontSize:"11px", fontWeight:"700", textTransform:"uppercase", letterSpacing:"0.08em", margin:"0 0 10px" }}>Color del tema</p>
+          <div style={{ display:"flex", gap:"10px" }}>
+            {Object.entries(THEMES).map(([key,val]) => (
+              <button key={key} onClick={()=>{setTheme(key);setShowTheme(false);}} style={{ flex:1, padding:"10px 6px", background:theme===key?val.light:"transparent", border:`2px solid ${theme===key?val.primary:BORDER}`, borderRadius:"10px", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:"6px" }}>
+                <div style={{ width:"20px", height:"20px", borderRadius:"50%", background:val.primary }} />
+                <span style={{ color:theme===key?val.primary:TEXT_MUT, fontSize:"11px", fontWeight:"700" }}>{val.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      <div style={{ padding:"16px 20px 0", display:"flex", gap:"8px" }}>
+        <select value={month} onChange={e=>setMonth(Number(e.target.value))} style={{ ...inpStyle, flex:2, padding:"10px 12px" }}>{MONTHS.map((m,i)=><option key={i} value={i}>{m}</option>)}</select>
+        <select value={year} onChange={e=>setYear(Number(e.target.value))} style={{ ...inpStyle, flex:1, padding:"10px 12px" }}>{years.map(y=><option key={y} value={y}>{y}</option>)}</select>
+      </div>
+      <div style={{ padding:"16px 20px 0", display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px" }}>
+        {[
+          { label:"Ingresos",  val:totalI, color:t.primary, bg:t.light, bd:t.border },
+          { label:"Gastos",    val:totalG, color:"#f87171", bg:"rgba(248,113,113,0.1)", bd:"rgba(248,113,113,0.25)" },
+          { label:"Beneficio", val:benef,  color:benef>=0?t.primary:"#f87171", bg:benef>=0?t.light:"rgba(248,113,113,0.1)", bd:benef>=0?t.border:"rgba(248,113,113,0.25)" },
+          { label:"ROI",       roi:true,   color:roi>=0?t.primary:"#f87171", bg:t.light, bd:t.border },
+        ].map(c=>(
+          <div key={c.label} style={{ background:c.bg, border:`1px solid ${c.bd}`, borderRadius:"14px", padding:"16px" }}>
+            <p style={{ color:TEXT_MUT, fontSize:"11px", fontWeight:"700", textTransform:"uppercase", letterSpacing:"0.08em", margin:"0 0 6px" }}>{c.label}</p>
+            <p style={{ color:c.color, fontSize:"20px", fontWeight:"800", margin:0 }}>{c.roi ? (privacy?"••••":`${roi.toFixed(1)}%`) : fmt(c.val,privacy)}</p>
+          </div>
+        ))}
+      </div>
+      <div style={{ padding:"24px 20px 0" }}>
+        <p style={{ color:TEXT_MUT, fontSize:"12px", fontWeight:"700", textTransform:"uppercase", letterSpacing:"0.08em", margin:"0 0 12px" }}>Últimos movimientos</p>
+        {[...mv.map(v=>({...v,tipo:"ingreso"}))]
+          .concat(mg.map(g=>({...g,tipo:"gasto"})))
+          .sort((a,b)=>b.createdAt-a.createdAt).slice(0,6)
+          .map(mov=>(
+            <div key={mov.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 0", borderBottom:`1px solid ${BORDER}` }}>
+              <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+                <div style={{ width:"8px", height:"8px", borderRadius:"50%", background:mov.tipo==="ingreso"?t.primary:"#f87171", flexShrink:0 }} />
+                <span style={{ color:TEXT_PRI, fontSize:"14px" }}>{mov.description||(mov.tipo==="ingreso"?"Ingreso":"Gasto")}</span>
+              </div>
+              <span style={{ color:mov.tipo==="ingreso"?t.primary:"#f87171", fontSize:"14px", fontWeight:"700", whiteSpace:"nowrap", marginLeft:"8px" }}>
+                {mov.tipo==="ingreso"?"+":"-"}{fmt(mov.amount,privacy)}
+              </span>
+            </div>
+          ))}
+        {mv.length===0&&mg.length===0&&<p style={{ color:TEXT_MUT, fontSize:"14px", textAlign:"center", padding:"20px 0" }}>Sin movimientos este mes</p>}
+      </div>
+    </div>
+  );
+}
+
+// ── VENTAS ──
+function Ventas({ ventas, setVentas, privacy, theme }) {
+  const now = new Date();
+  const t = THEMES[theme];
+  const [month, setMonth] = useState(now.getMonth());
+  const [year, setYear] = useState(now.getFullYear());
+  const [showModal, setShowModal] = useState(false);
+  const [editEntry, setEditEntry] = useState(null);
+  const [confirmId, setConfirmId] = useState(null);
+  const filtered = ventas.filter(v=>v.month===month&&v.year===year).sort((a,b)=>b.createdAt-a.createdAt);
+  const total = filtered.reduce((s,v)=>s+v.amount,0);
+  const years = [...new Set([...ventas.map(v=>v.year),now.getFullYear()])].sort((a,b)=>b-a);
+  const grad = `linear-gradient(135deg,${t.primary},${t.secondary})`;
+  function add(f) { if(!f.amount||isNaN(parseFloat(f.amount)))return; setVentas(p=>[...p,{id:genId(),amount:parseFloat(f.amount),description:f.description.trim(),month:f.month,year:f.year,createdAt:Date.now()}]); setShowModal(false); }
+  function edit(f) { if(!f.amount||isNaN(parseFloat(f.amount)))return; setVentas(p=>p.map(v=>v.id===editEntry.id?{...v,amount:parseFloat(f.amount),description:f.description.trim(),month:f.month,year:f.year}:v)); setEditEntry(null); }
+  function del(id) { setVentas(p=>p.filter(v=>v.id!==id)); setConfirmId(null); }
+  return (
+    <div style={{ paddingBottom:"100px" }}>
+      <div style={{ padding:"20px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div><p style={{ color:TEXT_MUT, fontSize:"12px", fontWeight:"600", textTransform:"uppercase", letterSpacing:"0.08em", margin:0 }}>Ingresos</p><h1 style={{ color:TEXT_PRI, fontSize:"22px", fontWeight:"800", margin:"2px 0 0" }}>Ventas</h1></div>
+        <button onClick={()=>setShowModal(true)} style={{ background:grad, border:"none", borderRadius:"50%", width:"42px", height:"42px", cursor:"pointer", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:`0 4px 12px ${t.primary}44` }}><IconPlus /></button>
+      </div>
+      <div style={{ padding:"16px 20px 0", display:"flex", gap:"8px" }}>
+        <select value={month} onChange={e=>setMonth(Number(e.target.value))} style={{ ...inpStyle, flex:2, padding:"10px 12px" }}>{MONTHS.map((m,i)=><option key={i} value={i}>{m}</option>)}</select>
+        <select value={year} onChange={e=>setYear(Number(e.target.value))} style={{ ...inpStyle, flex:1, padding:"10px 12px" }}>{years.map(y=><option key={y} value={y}>{y}</option>)}</select>
+      </div>
+      <div style={{ margin:"16px 20px 0", background:t.light, border:`1px solid ${t.border}`, borderRadius:"14px", padding:"16px" }}>
+        <p style={{ color:TEXT_MUT, fontSize:"11px", fontWeight:"700", textTransform:"uppercase", letterSpacing:"0.08em", margin:"0 0 4px" }}>Total del mes</p>
+        <p style={{ color:t.primary, fontSize:"26px", fontWeight:"800", margin:0 }}>{fmt(total,privacy)}</p>
+      </div>
+      <div style={{ padding:"16px 20px 0" }}>
+        {filtered.length===0&&<p style={{ color:TEXT_MUT, fontSize:"14px", textAlign:"center", padding:"30px 0" }}>Sin ingresos este mes</p>}
+        {filtered.map(v=>(
+          <div key={v.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 0", borderBottom:`1px solid ${BORDER}` }}>
+            <div style={{ flex:1 }}><p style={{ color:TEXT_PRI, fontSize:"14px", margin:"0 0 2px" }}>{v.description||"—"}</p><p style={{ color:TEXT_MUT, fontSize:"12px", margin:0 }}>{MONTHS[v.month]} {v.year}</p></div>
+            <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+              <span style={{ color:t.primary, fontSize:"15px", fontWeight:"700" }}>+{fmt(v.amount,privacy)}</span>
+              <button onClick={()=>setEditEntry(v)} style={{ background:"none", border:"none", cursor:"pointer", color:TEXT_MUT, padding:"4px", display:"flex" }}><IconEdit /></button>
+              <button onClick={()=>setConfirmId(v.id)} style={{ background:"none", border:"none", cursor:"pointer", color:TEXT_MUT, padding:"4px", display:"flex" }}><IconTrash /></button>
+            </div>
+          </div>
+        ))}
+      </div>
+      {showModal&&<Modal title="Añadir ingreso" onClose={()=>setShowModal(false)}><EntryForm onSave={add} gradStyle={grad} /></Modal>}
+      {editEntry&&<Modal title="Editar ingreso" onClose={()=>setEditEntry(null)}><EntryForm initial={{amount:String(editEntry.amount),description:editEntry.description,month:editEntry.month,year:editEntry.year}} onSave={edit} gradStyle={grad} /></Modal>}
+      {confirmId&&<Confirm msg="¿Eliminar este ingreso?" onOk={()=>del(confirmId)} onCancel={()=>setConfirmId(null)} />}
+    </div>
+  );
+}
+
+// ── GASTOS ──
+function GastosTab({ gastos, setGastos, privacy, theme }) {
+  const now = new Date();
+  const [month, setMonth] = useState(now.getMonth());
+  const [year, setYear] = useState(now.getFullYear());
+  const [showModal, setShowModal] = useState(false);
+  const [editEntry, setEditEntry] = useState(null);
+  const [confirmId, setConfirmId] = useState(null);
+  const filtered = gastos.filter(g=>g.month===month&&g.year===year).sort((a,b)=>b.createdAt-a.createdAt);
+  const total = filtered.reduce((s,g)=>s+g.amount,0);
+  const years = [...new Set([...gastos.map(g=>g.year),now.getFullYear()])].sort((a,b)=>b-a);
+  const grad = "linear-gradient(135deg,#f87171,#dc2626)";
+  function add(f) { if(!f.amount||isNaN(parseFloat(f.amount)))return; setGastos(p=>[...p,{id:genId(),amount:parseFloat(f.amount),description:f.description.trim(),month:f.month,year:f.year,createdAt:Date.now()}]); setShowModal(false); }
+  function edit(f) { if(!f.amount||isNaN(parseFloat(f.amount)))return; setGastos(p=>p.map(g=>g.id===editEntry.id?{...g,amount:parseFloat(f.amount),description:f.description.trim(),month:f.month,year:f.year}:g)); setEditEntry(null); }
+  function del(id) { setGastos(p=>p.filter(g=>g.id!==id)); setConfirmId(null); }
+  return (
+    <div style={{ paddingBottom:"100px" }}>
+      <div style={{ padding:"20px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div><p style={{ color:TEXT_MUT, fontSize:"12px", fontWeight:"600", textTransform:"uppercase", letterSpacing:"0.08em", margin:0 }}>Salidas</p><h1 style={{ color:TEXT_PRI, fontSize:"22px", fontWeight:"800", margin:"2px 0 0" }}>Gastos</h1></div>
+        <button onClick={()=>setShowModal(true)} style={{ background:grad, border:"none", borderRadius:"50%", width:"42px", height:"42px", cursor:"pointer", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 12px rgba(248,113,113,0.3)" }}><IconPlus /></button>
+      </div>
+      <div style={{ padding:"16px 20px 0", display:"flex", gap:"8px" }}>
+        <select value={month} onChange={e=>setMonth(Number(e.target.value))} style={{ ...inpStyle, flex:2, padding:"10px 12px" }}>{MONTHS.map((m,i)=><option key={i} value={i}>{m}</option>)}</select>
+        <select value={year} onChange={e=>setYear(Number(e.target.value))} style={{ ...inpStyle, flex:1, padding:"10px 12px" }}>{years.map(y=><option key={y} value={y}>{y}</option>)}</select>
+      </div>
+      <div style={{ margin:"16px 20px 0", background:"rgba(248,113,113,0.1)", border:"1px solid rgba(248,113,113,0.25)", borderRadius:"14px", padding:"16px" }}>
+        <p style={{ color:TEXT_MUT, fontSize:"11px", fontWeight:"700", textTransform:"uppercase", letterSpacing:"0.08em", margin:"0 0 4px" }}>Total del mes</p>
+        <p style={{ color:"#f87171", fontSize:"26px", fontWeight:"800", margin:0 }}>{fmt(total,privacy)}</p>
+      </div>
+      <div style={{ padding:"16px 20px 0" }}>
+        {filtered.length===0&&<p style={{ color:TEXT_MUT, fontSize:"14px", textAlign:"center", padding:"30px 0" }}>Sin gastos este mes</p>}
+        {filtered.map(g=>(
+          <div key={g.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 0", borderBottom:`1px solid ${BORDER}` }}>
+            <div style={{ flex:1 }}><p style={{ color:TEXT_PRI, fontSize:"14px", margin:"0 0 2px" }}>{g.description||"—"}</p><p style={{ color:TEXT_MUT, fontSize:"12px", margin:0 }}>{MONTHS[g.month]} {g.year}</p></div>
+            <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+              <span style={{ color:"#f87171", fontSize:"15px", fontWeight:"700" }}>-{fmt(g.amount,privacy)}</span>
+              <button onClick={()=>setEditEntry(g)} style={{ background:"none", border:"none", cursor:"pointer", color:TEXT_MUT, padding:"4px", display:"flex" }}><IconEdit /></button>
+              <button onClick={()=>setConfirmId(g.id)} style={{ background:"none", border:"none", cursor:"pointer", color:TEXT_MUT, padding:"4px", display:"flex" }}><IconTrash /></button>
+            </div>
+          </div>
+        ))}
+      </div>
+      {showModal&&<Modal title="Añadir gasto" onClose={()=>setShowModal(false)}><EntryForm onSave={add} gradStyle={grad} /></Modal>}
+      {editEntry&&<Modal title="Editar gasto" onClose={()=>setEditEntry(null)}><EntryForm initial={{amount:String(editEntry.amount),description:editEntry.description,month:editEntry.month,year:editEntry.year}} onSave={edit} gradStyle={grad} /></Modal>}
+      {confirmId&&<Confirm msg="¿Eliminar este gasto?" onOk={()=>del(confirmId)} onCancel={()=>setConfirmId(null)} />}
+    </div>
+  );
+}
+
+// ── INFORMES ──
+function Informes({ ventas, gastos, privacy, theme }) {
+  const now = new Date();
+  const t = THEMES[theme];
+  const years = [...new Set([...ventas.map(v=>v.year),...gastos.map(g=>g.year),now.getFullYear()])].sort((a,b)=>b-a);
+  const [year, setYear] = useState(now.getFullYear());
+  const [expanded, setExpanded] = useState(null);
+  const data = MONTHS.map((_,i)=>({
+    ing: ventas.filter(v=>v.year===year&&v.month===i).reduce((s,v)=>s+v.amount,0),
+    gst: gastos.filter(g=>g.year===year&&g.month===i).reduce((s,g)=>s+g.amount,0),
+  })).map(d=>({...d, ben:d.ing-d.gst}));
+  const totI = data.reduce((s,d)=>s+d.ing,0);
+  const totG = data.reduce((s,d)=>s+d.gst,0);
+  const totB = totI - totG;
+  return (
+    <div style={{ paddingBottom:"100px" }}>
+      <div style={{ padding:"20px 20px 0" }}>
+        <p style={{ color:TEXT_MUT, fontSize:"12px", fontWeight:"600", textTransform:"uppercase", letterSpacing:"0.08em", margin:0 }}>Análisis</p>
+        <h1 style={{ color:TEXT_PRI, fontSize:"22px", fontWeight:"800", margin:"2px 0 0" }}>Informes</h1>
+      </div>
+      <div style={{ padding:"16px 20px 0" }}>
+        <select value={year} onChange={e=>setYear(Number(e.target.value))} style={{ ...inpStyle, padding:"10px 12px" }}>{years.map(y=><option key={y} value={y}>{y}</option>)}</select>
+      </div>
+      <div style={{ padding:"16px 20px 0", display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"8px" }}>
+        {[{label:"Ingresos",val:totI,color:t.primary},{label:"Gastos",val:totG,color:"#f87171"},{label:"Beneficio",val:totB,color:totB>=0?t.primary:"#f87171"}].map(c=>(
+          <div key={c.label} style={{ background:BG_CARD, borderRadius:"12px", padding:"12px 10px" }}>
+            <p style={{ color:TEXT_MUT, fontSize:"10px", fontWeight:"700", textTransform:"uppercase", margin:"0 0 4px" }}>{c.label}</p>
+            <p style={{ color:c.color, fontSize:"14px", fontWeight:"800", margin:0 }}>{fmt(c.val,privacy)}</p>
+          </div>
+        ))}
+      </div>
+      <div style={{ margin:"16px 20px 0", background:BG_CARD, borderRadius:"14px", padding:"16px" }}>
+        <div style={{ display:"flex", gap:"12px", marginBottom:"12px" }}>
+          <span style={{ fontSize:"11px", color:t.primary, fontWeight:"700" }}>▋ Ingresos</span>
+          <span style={{ fontSize:"11px", color:"#f87171", fontWeight:"700" }}>▋ Gastos</span>
+        </div>
+        <MiniBarChart data={data} theme={theme} />
+      </div>
+      <div style={{ padding:"16px 20px 0" }}>
+        <p style={{ color:TEXT_MUT, fontSize:"12px", fontWeight:"700", textTransform:"uppercase", letterSpacing:"0.08em", margin:"0 0 12px" }}>Por mes</p>
+        {MONTHS.map((m,i)=>{
+          const d = data[i];
+          const has = d.ing>0||d.gst>0;
+          const isExp = expanded===i;
+          return (
+            <div key={i}>
+              <div onClick={()=>has&&setExpanded(isExp?null:i)} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"13px 0", borderBottom:`1px solid ${BORDER}`, cursor:has?"pointer":"default" }}>
+                <span style={{ color:has?TEXT_PRI:TEXT_MUT, fontSize:"14px", fontWeight:"600" }}>{m}</span>
+                <div style={{ display:"flex", gap:"8px", alignItems:"center" }}>
+                  <span style={{ color:t.primary, fontSize:"13px" }}>{has?`+${fmt(d.ing,privacy)}`:"—"}</span>
+                  <span style={{ color:"#f87171", fontSize:"13px" }}>{has&&d.gst>0?`-${fmt(d.gst,privacy)}`:""}</span>
+                  <span style={{ color:d.ben>=0?t.primary:"#f87171", fontSize:"13px", fontWeight:"700", minWidth:"60px", textAlign:"right" }}>{has?fmt(d.ben,privacy):""}</span>
+                </div>
+              </div>
+              {isExp&&has&&(
+                <div style={{ background:BG_INPUT, borderRadius:"10px", padding:"12px", margin:"4px 0 8px" }}>
+                  {ventas.filter(v=>v.year===year&&v.month===i).map(v=>(
+                    <div key={v.id} style={{ display:"flex", justifyContent:"space-between", padding:"6px 0", borderBottom:`1px solid ${BORDER}` }}>
+                      <span style={{ color:TEXT_SEC, fontSize:"13px" }}>{v.description||"Ingreso"}</span>
+                      <span style={{ color:t.primary, fontSize:"13px", fontWeight:"600" }}>+{fmt(v.amount,privacy)}</span>
+                    </div>
+                  ))}
+                  {gastos.filter(g=>g.year===year&&g.month===i).map(g=>(
+                    <div key={g.id} style={{ display:"flex", justifyContent:"space-between", padding:"6px 0", borderBottom:`1px solid ${BORDER}` }}>
+                      <span style={{ color:TEXT_SEC, fontSize:"13px" }}>{g.description||"Gasto"}</span>
+                      <span style={{ color:"#f87171", fontSize:"13px", fontWeight:"600" }}>-{fmt(g.amount,privacy)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── APP ROOT ──
+function App() {
+  const [tab, setTab] = useState("inicio");
+  const [privacy, setPrivacy] = useState(false);
+  const [theme, setTheme] = useState(()=>localStorage.getItem("gm_theme")||"emerald");
+  const [ventas, setVentas] = useState(()=>{try{return JSON.parse(localStorage.getItem("gm_ventas")||"[]")}catch{return[]}});
+  const [gastos, setGastos] = useState(()=>{try{return JSON.parse(localStorage.getItem("gm_gastos")||"[]")}catch{return[]}});
+  useEffect(()=>{localStorage.setItem("gm_ventas",JSON.stringify(ventas))},[ventas]);
+  useEffect(()=>{localStorage.setItem("gm_gastos",JSON.stringify(gastos))},[gastos]);
+  useEffect(()=>{localStorage.setItem("gm_theme",theme)},[theme]);
+  const t = THEMES[theme];
+  const tabs = [
+    {id:"inicio",   label:"Inicio",   icon:<IconHome />},
+    {id:"ventas",   label:"Ingresos",   icon:<IconTrend />},
+    {id:"gastos",   label:"Gastos",   icon:<IconBag />},
+    {id:"informes", label:"Informes", icon:<IconBar />},
+  ];
+  return (
+    <div style={{ background:BG_MAIN, minHeight:"100vh", maxWidth:"480px", margin:"0 auto", position:"relative" }}>
+      {tab==="inicio"   && <Dashboard ventas={ventas} gastos={gastos} privacy={privacy} setPrivacy={setPrivacy} theme={theme} setTheme={setTheme} />}
+      {tab==="ventas"   && <Ventas ventas={ventas} setVentas={setVentas} privacy={privacy} theme={theme} />}
+      {tab==="gastos"   && <GastosTab gastos={gastos} setGastos={setGastos} privacy={privacy} theme={theme} />}
+      {tab==="informes" && <Informes ventas={ventas} gastos={gastos} privacy={privacy} theme={theme} />}
+      <div style={{ position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:"480px", background:BG_NAV, borderTop:`1px solid ${BORDER}`, display:"flex", zIndex:50, paddingBottom:"env(safe-area-inset-bottom,0px)" }}>
+        {tabs.map(tb=>(
+          <button key={tb.id} onClick={()=>setTab(tb.id)} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:"4px", padding:"10px 0 8px", background:"none", border:"none", cursor:"pointer", color:tab===tb.id?t.primary:TEXT_MUT }}>
+            {tb.icon}
+            <span style={{ fontSize:"10px", fontWeight:"700", textTransform:"uppercase", letterSpacing:"0.05em" }}>{tb.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
