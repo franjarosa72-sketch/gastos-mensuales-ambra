@@ -7,14 +7,15 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #1a2744; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+    body { background: #fdf2f4; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
     select, input { appearance: none; -webkit-appearance: none; }
-    select option { background: #1e2e4d; color: #e8edf7; }
+    select option { background: #f5d6dd; color: #3d1a22; }
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #2e4070; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb { background: #e8b4bf; border-radius: 4px; }
   </style>
 </head>
 <body>
@@ -28,14 +29,14 @@ const THEMES = {
   violet:  { name: "Violeta",   primary: "#a78bfa", secondary: "#7c3aed", light: "rgba(167,139,250,0.1)", border: "rgba(167,139,250,0.25)" },
   blue:    { name: "Azul",      primary: "#60a5fa", secondary: "#2563eb", light: "rgba(96,165,250,0.1)",  border: "rgba(96,165,250,0.25)" },
 };
-const BG_MAIN  = "#1a2744";
-const BG_CARD  = "#243358";
-const BG_INPUT = "#1e2e4d";
-const BG_NAV   = "#1e2e4d";
-const BORDER   = "#2e4070";
-const TEXT_PRI = "#e8edf7";
-const TEXT_SEC = "#8fa3cc";
-const TEXT_MUT = "#5a729e";
+const BG_MAIN  = "#fdf2f4";
+const BG_CARD  = "#fae6ea";
+const BG_INPUT = "#f5d6dd";
+const BG_NAV   = "#fae6ea";
+const BORDER   = "#e8b4bf";
+const TEXT_PRI = "#3d1a22";
+const TEXT_SEC = "#8a4f5e";
+const TEXT_MUT = "#b07080";
 
 function genId() { return Date.now().toString(36) + Math.random().toString(36).substr(2); }
 function fmt(amount, privacy) {
@@ -56,6 +57,7 @@ const IconTrash = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="no
 const IconEdit = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
 const IconX = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
 const IconPalette = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>;
+const IconDownload = () => <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
 
 const inpStyle = { width:"100%", padding:"12px 14px", background:BG_INPUT, border:`1px solid ${BORDER}`, borderRadius:"10px", color:TEXT_PRI, fontSize:"15px", outline:"none" };
 const lblStyle = { fontSize:"12px", color:TEXT_MUT, fontWeight:"600", marginBottom:"6px", display:"block", textTransform:"uppercase", letterSpacing:"0.05em" };
@@ -218,6 +220,13 @@ function Ventas({ ventas, setVentas, privacy, theme }) {
   const filtered = ventas.filter(v=>v.month===month&&v.year===year).sort((a,b)=>b.createdAt-a.createdAt);
   const total = filtered.reduce((s,v)=>s+v.amount,0);
   const years = [...new Set([...ventas.map(v=>v.year),now.getFullYear()])].sort((a,b)=>b-a);
+  function exportExcel() {
+    const rows = filtered.map(v => ({ Día: v.day||"", Mes: MONTHS[v.month], Año: v.year, Descripción: v.description||"—", Importe: v.amount }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Ingresos");
+    XLSX.writeFile(wb, `Ingresos_${MONTHS[month]}_${year}.xlsx`);
+  }
   const grad = `linear-gradient(135deg,${t.primary},${t.secondary})`;
   function add(f) { if(!f.amount||isNaN(parseFloat(f.amount)))return; setVentas(p=>[...p,{id:genId(),amount:parseFloat(f.amount),description:f.description.trim(),day:f.day||now.getDate(),month:f.month,year:f.year,createdAt:Date.now()}]); setShowModal(false); }
   function edit(f) { if(!f.amount||isNaN(parseFloat(f.amount)))return; setVentas(p=>p.map(v=>v.id===editEntry.id?{...v,amount:parseFloat(f.amount),description:f.description.trim(),day:f.day||v.day,month:f.month,year:f.year}:v)); setEditEntry(null); }
@@ -232,9 +241,12 @@ function Ventas({ ventas, setVentas, privacy, theme }) {
         <select value={month} onChange={e=>setMonth(Number(e.target.value))} style={{ ...inpStyle, flex:2, padding:"10px 12px" }}>{MONTHS.map((m,i)=><option key={i} value={i}>{m}</option>)}</select>
         <select value={year} onChange={e=>setYear(Number(e.target.value))} style={{ ...inpStyle, flex:1, padding:"10px 12px" }}>{years.map(y=><option key={y} value={y}>{y}</option>)}</select>
       </div>
-      <div style={{ margin:"16px 20px 0", background:t.light, border:`1px solid ${t.border}`, borderRadius:"14px", padding:"16px" }}>
-        <p style={{ color:TEXT_MUT, fontSize:"11px", fontWeight:"700", textTransform:"uppercase", letterSpacing:"0.08em", margin:"0 0 4px" }}>Total del mes</p>
-        <p style={{ color:t.primary, fontSize:"26px", fontWeight:"800", margin:0 }}>{fmt(total,privacy)}</p>
+      <div style={{ margin:"16px 20px 0", background:t.light, border:`1px solid ${t.border}`, borderRadius:"14px", padding:"14px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div>
+          <p style={{ color:TEXT_MUT, fontSize:"11px", fontWeight:"700", textTransform:"uppercase", letterSpacing:"0.08em", margin:"0 0 4px" }}>Total del mes</p>
+          <p style={{ color:t.primary, fontSize:"26px", fontWeight:"800", margin:0 }}>{fmt(total,privacy)}</p>
+        </div>
+        {filtered.length>0&&<button onClick={exportExcel} style={{ background:BG_INPUT, border:`1px solid ${BORDER}`, borderRadius:"10px", padding:"8px 12px", cursor:"pointer", color:TEXT_SEC, display:"flex", alignItems:"center", gap:"6px", fontSize:"12px", fontWeight:"600" }}><IconDownload /> Excel</button>}
       </div>
       <div style={{ padding:"16px 20px 0" }}>
         {filtered.length===0&&<p style={{ color:TEXT_MUT, fontSize:"14px", textAlign:"center", padding:"30px 0" }}>Sin ingresos este mes</p>}
@@ -267,6 +279,13 @@ function GastosTab({ gastos, setGastos, privacy, theme }) {
   const filtered = gastos.filter(g=>g.month===month&&g.year===year).sort((a,b)=>b.createdAt-a.createdAt);
   const total = filtered.reduce((s,g)=>s+g.amount,0);
   const years = [...new Set([...gastos.map(g=>g.year),now.getFullYear()])].sort((a,b)=>b-a);
+  function exportExcel() {
+    const rows = filtered.map(g => ({ Día: g.day||"", Mes: MONTHS[g.month], Año: g.year, Descripción: g.description||"—", Importe: g.amount }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Gastos");
+    XLSX.writeFile(wb, `Gastos_${MONTHS[month]}_${year}.xlsx`);
+  }
   const grad = "linear-gradient(135deg,#f87171,#dc2626)";
   function add(f) { if(!f.amount||isNaN(parseFloat(f.amount)))return; setGastos(p=>[...p,{id:genId(),amount:parseFloat(f.amount),description:f.description.trim(),day:f.day||now.getDate(),month:f.month,year:f.year,createdAt:Date.now()}]); setShowModal(false); }
   function edit(f) { if(!f.amount||isNaN(parseFloat(f.amount)))return; setGastos(p=>p.map(g=>g.id===editEntry.id?{...g,amount:parseFloat(f.amount),description:f.description.trim(),day:f.day||g.day,month:f.month,year:f.year}:g)); setEditEntry(null); }
@@ -281,9 +300,12 @@ function GastosTab({ gastos, setGastos, privacy, theme }) {
         <select value={month} onChange={e=>setMonth(Number(e.target.value))} style={{ ...inpStyle, flex:2, padding:"10px 12px" }}>{MONTHS.map((m,i)=><option key={i} value={i}>{m}</option>)}</select>
         <select value={year} onChange={e=>setYear(Number(e.target.value))} style={{ ...inpStyle, flex:1, padding:"10px 12px" }}>{years.map(y=><option key={y} value={y}>{y}</option>)}</select>
       </div>
-      <div style={{ margin:"16px 20px 0", background:"rgba(248,113,113,0.1)", border:"1px solid rgba(248,113,113,0.25)", borderRadius:"14px", padding:"16px" }}>
-        <p style={{ color:TEXT_MUT, fontSize:"11px", fontWeight:"700", textTransform:"uppercase", letterSpacing:"0.08em", margin:"0 0 4px" }}>Total del mes</p>
-        <p style={{ color:"#f87171", fontSize:"26px", fontWeight:"800", margin:0 }}>{fmt(total,privacy)}</p>
+      <div style={{ margin:"16px 20px 0", background:"rgba(248,113,113,0.1)", border:"1px solid rgba(248,113,113,0.25)", borderRadius:"14px", padding:"14px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div>
+          <p style={{ color:TEXT_MUT, fontSize:"11px", fontWeight:"700", textTransform:"uppercase", letterSpacing:"0.08em", margin:"0 0 4px" }}>Total del mes</p>
+          <p style={{ color:"#f87171", fontSize:"26px", fontWeight:"800", margin:0 }}>{fmt(total,privacy)}</p>
+        </div>
+        {filtered.length>0&&<button onClick={exportExcel} style={{ background:BG_INPUT, border:`1px solid ${BORDER}`, borderRadius:"10px", padding:"8px 12px", cursor:"pointer", color:TEXT_SEC, display:"flex", alignItems:"center", gap:"6px", fontSize:"12px", fontWeight:"600" }}><IconDownload /> Excel</button>}
       </div>
       <div style={{ padding:"16px 20px 0" }}>
         {filtered.length===0&&<p style={{ color:TEXT_MUT, fontSize:"14px", textAlign:"center", padding:"30px 0" }}>Sin gastos este mes</p>}
@@ -319,11 +341,22 @@ function Informes({ ventas, gastos, privacy, theme }) {
   const totI = data.reduce((s,d)=>s+d.ing,0);
   const totG = data.reduce((s,d)=>s+d.gst,0);
   const totB = totI - totG;
+  function exportAnual() {
+    const rows = MONTHS.map((m,i) => ({ Mes:m, Ingresos:data[i].ing, Gastos:data[i].gst, Beneficio:data[i].ben }));
+    rows.push({ Mes:"TOTAL", Ingresos:totI, Gastos:totG, Beneficio:totB });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, `Resumen ${year}`);
+    XLSX.writeFile(wb, `Informe_${year}.xlsx`);
+  }
   return (
     <div style={{ paddingBottom:"100px" }}>
-      <div style={{ padding:"20px 20px 0" }}>
-        <p style={{ color:TEXT_MUT, fontSize:"12px", fontWeight:"600", textTransform:"uppercase", letterSpacing:"0.08em", margin:0 }}>Análisis</p>
-        <h1 style={{ color:TEXT_PRI, fontSize:"22px", fontWeight:"800", margin:"2px 0 0" }}>Informes</h1>
+      <div style={{ padding:"20px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div>
+          <p style={{ color:TEXT_MUT, fontSize:"12px", fontWeight:"600", textTransform:"uppercase", letterSpacing:"0.08em", margin:0 }}>Análisis</p>
+          <h1 style={{ color:TEXT_PRI, fontSize:"22px", fontWeight:"800", margin:"2px 0 0" }}>Informes</h1>
+        </div>
+        <button onClick={exportAnual} style={{ background:BG_CARD, border:`1px solid ${BORDER}`, borderRadius:"10px", padding:"8px 12px", cursor:"pointer", color:TEXT_SEC, display:"flex", alignItems:"center", gap:"6px", fontSize:"12px", fontWeight:"600" }}><IconDownload /> Excel</button>
       </div>
       <div style={{ padding:"16px 20px 0" }}>
         <select value={year} onChange={e=>setYear(Number(e.target.value))} style={{ ...inpStyle, padding:"10px 12px" }}>{years.map(y=><option key={y} value={y}>{y}</option>)}</select>
